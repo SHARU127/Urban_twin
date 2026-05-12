@@ -117,6 +117,7 @@ def get_predictions(db: Session = Depends(get_db)):
         return {
             "traffic_congestion_risk": "unknown",
             "infrastructure_risk":"unknown",
+            "crowd_risk":"unknown",
             "recommendation":"NO weather data available. call /weather first."
         }
 

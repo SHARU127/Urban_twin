@@ -10,4 +10,5 @@ class IncidentCreate(BaseModel):
 class PredictionResponse(BaseModel):
     traffic_congestion_risk: str
     infrastructure_risk: str
+    crowd_risk: str
     recommendation: str

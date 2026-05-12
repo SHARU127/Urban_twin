@@ -2,6 +2,7 @@ def predict_risks(weather_condition: str, temperature: float, recent_incidents: 
     # Default values
     traffic_risk = "Low"
     infra_risk = "Low"
+    crowd_risk = "Low"
     recommendation = "Normal operations."
 
     # Rule 1: Weather Impact
@@ -16,14 +17,20 @@ def predict_risks(weather_condition: str, temperature: float, recent_incidents: 
 
     # Rule 3: Incident Impact
     for incident in recent_incidents:
-        if incident.type.lower() == "flood" or incident.severity.lower() == "high":
+        inc_type = incident.type.lower()
+        if inc_type == "flood" or incident.severity.lower() == "high":
             traffic_risk = "High"
             infra_risk = "High"
             recommendation = "EMERGENCY: Immediate response required. Re-route traffic."
-            break # Stop checking, risk is already maxed out
+        if "gathering" in inc_type or "event" in inc_type or "protest" in inc_type or "festival" in inc_type:
+            crowd_risk = "High"
+            traffic_risk = "High"
+            if "EMERGENCY" not in recommendation:
+                recommendation = "High crowd density detected. Manage crowd flow and traffic routing."
 
     return {
         "traffic_congestion_risk": traffic_risk,
         "infrastructure_risk": infra_risk,
+        "crowd_risk": crowd_risk,
         "recommendation": recommendation
     }

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Urban Twin - Bengaluru</title>
+    <title>Self-Healing Urban Twin</title>
     <!-- Google Fonts for Modern Typography -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <!-- Leaflet CSS for Map -->
@@ -165,7 +165,7 @@
         <h1>Report Incident</h1>
         <form id="incident-form">
             <div class="data-row">
-                <input type="text" id="inc-type" placeholder="Type (e.g. Pothole)" required
+                <input type="text" id="inc-type" placeholder="Type (e.g. Pothole, Waterlogging, Blockage)" required
                     style="width: 100%; padding: 8px; border-radius: 6px; border: none; outline: none; margin-bottom: 10px;">
             </div>
             <div class="data-row">
@@ -210,7 +210,8 @@
     </div>
     <!-- The Glassmorphism Floating Dashboard -->
     <div class="dashboard-panel">
-        <h1>Urban Twin Hub</h1>
+        <h1>Self-Healing Urban Twin</h1>
+        <p style="color: #94a3b8; font-size: 0.85rem; margin-top: -15px; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 1px;">by TENSOR CREW</p>
 
         <div class="section">
             <div class="section-title">Live Weather</div>
@@ -233,6 +234,10 @@
             <div class="data-row">
                 <span class="data-label">Infra Risk</span>
                 <span class="data-value loading" id="pred-infra">--</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">Crowd Risk</span>
+                <span class="data-value loading" id="pred-crowd">--</span>
             </div>
             <div
                 style="margin-top: 16px; font-size: 0.9rem; color: #94a3b8; line-height: 1.5; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 12px;">
@@ -283,6 +288,10 @@
                 const iRisk = document.getElementById('pred-infra');
                 iRisk.textContent = predData.infrastructure_risk;
                 iRisk.className = `data-value ${getRiskClass(predData.infrastructure_risk)}`;
+
+                const cRisk = document.getElementById('pred-crowd');
+                cRisk.textContent = predData.crowd_risk;
+                cRisk.className = `data-value ${getRiskClass(predData.crowd_risk)}`;
 
                 const rec = document.getElementById('pred-rec');
                 rec.textContent = predData.recommendation;
@@ -384,7 +393,10 @@
             formData.append('location', document.getElementById('inc-loc').value);
             formData.append('severity', document.getElementById('inc-sev').value);
             formData.append('reported_by', document.getElementById('inc-user').value);
-            formData.append('image', document.getElementById('inc-image').files[0]); // Handle file
+            const imageFile = document.getElementById('inc-image').files[0];
+            if (imageFile) {
+                formData.append('image', imageFile); 
+            }
 
             const response = await fetch('/incidents', {
                 method: 'POST',
