@@ -244,6 +244,17 @@
                 <strong style="color: #fff;">Action Plan:</strong> <br>
                 <span id="pred-rec" class="loading">Analyzing current city data...</span>
             </div>
+            <div id="cascading-alerts-container" style="display: none; margin-top: 16px; font-size: 0.85rem; color: #fca5a5; line-height: 1.5; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); padding: 12px; border-radius: 12px; animation: pulse 2s infinite;">
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Live Choke Points</div>
+            <div id="choke-points-list" style="max-height: 120px; overflow-y: auto; margin-right: -10px; padding-right: 10px;">
+                <div class="data-row">
+                    <span class="data-label loading">Loading choke points...</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -257,12 +268,16 @@
         // 1. Initialize Map centered on Bengaluru
         const map = L.map('map', { zoomControl: false }).setView([12.9716, 77.5946], 12);
 
-        // 2. Add a Premium Dark Mode Map Layer
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-            subdomains: 'abcd',
-            maxZoom: 20
+        // 2. Add a Normal Coloured Map Layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
         }).addTo(map);
+
+        // Layer group for choke points
+        let chokePointLayerGroup = L.layerGroup().addTo(map);
+        // Layer group for incidents
+        let incidentLayerGroup = L.layerGroup().addTo(map);
 
         // 3. Function to fetch data from our FastAPI backend
         async function updateDashboard() {
@@ -297,9 +312,59 @@
                 rec.textContent = predData.recommendation;
                 rec.classList.remove('loading');
 
+                // --- Cascading Alerts ---
+                const alertsContainer = document.getElementById('cascading-alerts-container');
+                if (predData.cascading_alerts && predData.cascading_alerts.length > 0) {
+                    alertsContainer.style.display = 'block';
+                    alertsContainer.innerHTML = predData.cascading_alerts.map(a => `<div style="margin-bottom: 8px;"><strong>${a}</strong></div>`).join('');
+                } else {
+                    alertsContainer.style.display = 'none';
+                    alertsContainer.innerHTML = '';
+                }
+
+                // --- Update Choke Points UI and Map ---
+                const cpList = document.getElementById('choke-points-list');
+                cpList.innerHTML = '';
+                chokePointLayerGroup.clearLayers();
+
+                if (predData.choke_points && predData.choke_points.length > 0) {
+                    predData.choke_points.forEach(cp => {
+                        // Add to UI list
+                        const row = document.createElement('div');
+                        row.className = 'data-row';
+                        row.innerHTML = `
+                            <span class="data-label">${cp.name}</span>
+                            <span class="data-value ${getRiskClass(cp.risk_level)}">${cp.risk_level}</span>
+                        `;
+                        cpList.appendChild(row);
+
+                        // Add to Map
+                        const color = getSeverityColor(cp.risk_level);
+                        const marker = L.circleMarker([cp.latitude, cp.longitude], {
+                            radius: 12, // slightly larger for choke points
+                            fillColor: color,
+                            color: "#fff",
+                            weight: 3,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        }).addTo(chokePointLayerGroup);
+
+                        marker.bindPopup(`
+                            <strong style="color:${color}; font-size:1.1rem;">Choke Point</strong><br>
+                            <span style="color:#cbd5e1;">Name:</span> ${cp.name}<br>
+                            <span style="color:#cbd5e1;">Traffic Risk:</span> <b style="color:${color}">${cp.risk_level}</b>
+                        `);
+                    });
+                } else {
+                    cpList.innerHTML = '<div class="data-row"><span class="data-label">No choke points configured</span></div>';
+                }
+
                 // --- C. Fetch Incidents and plot on map ---
                 const incidentsRes = await fetch('/');
                 const incidents = await incidentsRes.json();
+                
+                // Clear old incident markers
+                incidentLayerGroup.clearLayers();
 
                 // --- D. Draw the Analytics Chart ---
                 let high = 0, medium = 0, low = 0;
@@ -348,7 +413,7 @@
                         weight: 2,
                         opacity: 1,
                         fillOpacity: 0.9
-                    }).addTo(map);
+                    }).addTo(incidentLayerGroup);
 
                     let popupContent = `
                         <strong style="color:#38bdf8; font-size:1.1rem;">${inc.type.toUpperCase()}</strong><br>
